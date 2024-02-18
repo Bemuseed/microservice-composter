@@ -1,5 +1,5 @@
 from enum import Enum
-import math
+import random
 
 class RelationshipType(Enum):
     INHERITANCE = 1
@@ -43,7 +43,23 @@ def pr(list):
     return (list[0] + product) / 2
 
 
-lev_distances = {('Student', 'DbStorage'): 7, ('Student', 'FileStorage'): 9, ('Student', 'DataParser'): 8, ('Student', 'Controller'): 9, ('Student', 'StorageType'): 9, ('DbStorage', 'FileStorage'): 6, ('DbStorage', 'DataParser'): 7, ('DbStorage', 'Controller'): 8, ('DbStorage', 'StorageType'): 8, ('FileStorage', 'DataParser'): 10, ('FileStorage', 'Controller'): 10, ('FileStorage', 'StorageType'): 8, ('DataParser', 'Controller'): 8, ('DataParser', 'StorageType'): 10, ('Controller', 'StorageType'): 10}
+lev_distances = {
+    ('Student', 'DbStorage'): 7,
+    ('Student', 'FileStorage'): 9,
+    ('Student', 'StorageType'): 8,
+    ('Student', 'Controller'): 9,
+    ('Student', 'DataParser'): 9,
+    ('DbStorage', 'StorageType'): 6,
+    ('DbStorage', 'FileStorage'): 4,
+    ('DbStorage', 'DataParser'): 7,
+    ('DbStorage', 'Controller'): 8,
+    ('FileStorage', 'DataParser'): 10,
+    ('FileStorage', 'Controller'): 10,
+    ('FileStorage', 'StorageType'): 8,
+    ('DataParser', 'Controller'): 8,
+    ('DataParser', 'StorageType'): 10,
+    ('Controller', 'StorageType'): 10
+}
 
 def getLevDistance(class_a, class_b):
     if ((class_a.name, class_b.name) in list(lev_distances.keys())):
@@ -135,32 +151,63 @@ class Microservice:
         else:
             self.ecs = 0
 
-def getSubObptimal(mic_list):
+"""
+def getSubOptimal(mic_list: list):
+    random.shuffle(mic_list)
     globalCounter = -1
-    globalMax = -1
-    globalMin = math.inf
     for i in range(len(mic_list)):
         localMax = mic_list[i].ics
         localMin = mic_list[i].ecs
         mic = mic_list[i]
         for j in range(len(mic_list)):
             if (i != j):
-                localMax = max(localMax, mic_list[j].ics)
-                localMin = min(localMin, mic_list[j].ecs)
+                if (mic_list[j].ics >= localMax and mic_list[j].ecs <= localMin):
+                    localMax = mic_list[j].ics
+                    localMin = mic_list[j].ecs
+                    mic = mic_list[j]
 
+        printMicHeader(mic)
+        print()
         localCounter = 0
-        for j in range(1, len(mic_list)):
+        for j in range(len(mic_list)):
             if (mic_list[j].ics <= localMax and mic_list[j].ecs >= localMin and mic_list[j] != mic):
                 localCounter += 1
+        print(localCounter)
+        print(globalCounter)
         if localCounter > globalCounter:
+            print("WIN")
             globalCounter = localCounter
-            globalMax = localMax
-            globalMin = localMin
+            globalMic = mic
+    print("BIG WIN")
+    printMicHeader(globalMic)
+    return globalMic
+"""
+def getSubOptimal(mic_list: list):
+    high_score = -1
+    for i in range(len(mic_list)):
+        localMax = mic_list[i].ics
+        localMin = mic_list[i].ecs
+        mic = mic_list[i]
+        for j in range(len(mic_list)):
+            if (i != j):
+                if (mic_list[j].ics >= localMax and mic_list[j].ecs <= localMin):
+                    localMax = mic_list[j].ics
+                    localMin = mic_list[j].ecs
+                    mic = mic_list[j]
+
+        ics_score = 0
+        ecs_score = 0
+        for j in range(len(mic_list)):
+            ics_score += localMax - mic_list[j].ics
+            ecs_score += mic_list[j].ecs - localMin
+        total_score = ics_score + ecs_score
+        if total_score > high_score:
+            high_score = total_score
             globalMic = mic
     return globalMic
 
 def printMicHeader(mic):
-    print(mic.name+"(ISC="+str(round(mic.ics, 2))+", ESC="+str(round(mic.ecs, 2))+"): ",end="")
+    print(mic.name+"(ISC="+str(round(mic.ics, 6))+", ESC="+str(round(mic.ecs, 6))+"): ",end="")
 
 clsController = Class("Controller")
 clsStorageType = Class("StorageType")
@@ -222,7 +269,7 @@ while (len(l_tmp) != 0):
     print("-----------------")
 
     if (len(l_tmp) != 0):
-        subOptimalMic = getSubObptimal(l_tmp)
+        subOptimalMic = getSubOptimal(l_tmp)
         l.append(subOptimalMic)
         l.remove(subOptimalMic.parents[0])
         l.remove(subOptimalMic.parents[1])
