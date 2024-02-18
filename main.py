@@ -94,12 +94,10 @@ class Microservice:
         self.classes = classes
         self.isc = 0
         self.esc = 0
-        self.updateCohesions()
     
-    def updateCohesions(self):
+    def updateInternalCohesion(self):
         if (len(self.classes) == 1):
             self.isc = 0
-            self.esc = 0
         else:
             internal_cohesion = 0
             for i in range(len(self.classes)-1):
@@ -107,6 +105,33 @@ class Microservice:
                     internal_cohesion += self.classes[i].intraSimilarity(self.classes[j], pr)
                     internal_cohesion += self.classes[j].intraSimilarity(self.classes[i], pr)
             self.isc = internal_cohesion / (len(self.classes) * (len(self.classes) - 1))
+    
+    def updateExternalCohesion(self, other_mics):
+        children = []
+        for mic in other_mics:
+            for c in mic.classes:
+                if (c in self.classes):
+                    children.append(mic)
+
+        clients = []
+        for mic in other_mics:
+            if (mic not in children):
+                for c in mic.classes:
+                    for r in c.outgoing_relationships:
+                        if (r[0] in self.classes):
+                            clients.append(mic)
+        
+        if (clients):
+            external_cohesion = 0
+            for mic in clients:
+                x = 0
+                for ci in mic.classes:
+                    for cj in self.classes:
+                        x += ci.interSimilarity(cj, pr)
+                external_cohesion += x / len(self.classes)
+            self.esc = external_cohesion / len(clients)
+        else:
+            self.esc = 0
 
 clsController = Class("Controller")
 clsStorageType = Class("StorageType")
@@ -153,7 +178,11 @@ l_tmp = []
 for i in range(len(l)-1):
     for j in range(i+1, len(l)):
         l_tmp.append(Microservice(l[i].classes + l[j].classes))
-        print(l_tmp[-1].name, end="")
-        print(" (ISC=" + str(l_tmp[-1].isc) + "):")
-        for c in l_tmp[-1].classes:
-            print("\t"+c.name)
+
+for mic in l_tmp:
+    mic.updateInternalCohesion()
+    mic.updateExternalCohesion(l)
+    print(mic.name, end="")
+    print(" (ISC=" + str(round(mic.isc, 2)) + ", ESC=" + str(round(mic.esc, 2)) + "):")
+    for c in mic.classes:
+        print("\t"+c.name)
