@@ -42,24 +42,36 @@ def pr(list):
         product *= list[i] 
     return (list[0] + product) / 2
 
-
 lev_distances = {
-    ('Student', 'DbStorage'): 7,
-    ('Student', 'FileStorage'): 9,
-    ('Student', 'StorageType'): 8,
-    ('Student', 'Controller'): 9,
-    ('Student', 'DataParser'): 9,
-    ('DbStorage', 'StorageType'): 6,
-    ('DbStorage', 'FileStorage'): 4,
-    ('DbStorage', 'DataParser'): 7,
-    ('DbStorage', 'Controller'): 8,
-    ('FileStorage', 'DataParser'): 10,
-    ('FileStorage', 'Controller'): 10,
-    ('FileStorage', 'StorageType'): 8,
-    ('DataParser', 'Controller'): 8,
-    ('DataParser', 'StorageType'): 10,
-    ('Controller', 'StorageType'): 10
-}
+    ('Controller', 'Role'): 6,
+    ('Controller', 'Students'): 9,
+    ('Controller', 'AcademicStaffMembers'): 16,
+    ('Controller', 'Student'): 9,
+    ('Controller', 'AcademicStaffMember'): 15,
+    ('Controller', 'Module'): 7,
+    ('Controller', 'ModuleCode'): 9,
+    ('Students', 'AcademicStaffMembers'): 16,
+    ('Students', 'Student'): 1,
+    ('Students', 'AcademicStaffMember'): 16, 
+    ('Students', 'Module'): 7,
+    ('Students', 'ModuleCode'): 8,
+    ('Students', 'Role'): 7,
+    ('AcademicStaffMembers', 'Student'): 16,
+    ('AcademicStaffMembers', 'AcademicStaffMember'): 1,
+    ('AcademicStaffMembers', 'Module'): 18, 
+    ('AcademicStaffMembers', 'ModuleCode'): 17,
+    ('AcademicStaffMembers', 'Role'): 19,
+    ('AcademicStaffMember', 'Student'): 16,
+    ('AcademicStaffMember', 'Module'): 17,
+    ('AcademicStaffMember', 'ModuleCode'): 16,
+    ('AcademicStaffMember', 'Role'): 18,
+    ('Student', 'Module'): 6,
+    ('Student', 'ModuleCode'): 8,
+    ('Student', 'Role'): 6,
+    ('Module', 'ModuleCode'): 4,
+    ('Module', 'Role'): 3,
+    ('ModuleCode', 'Role'): 7,
+} 
 
 def getLevDistance(class_a, class_b):
     if ((class_a.name, class_b.name) in list(lev_distances.keys())):
@@ -210,25 +222,30 @@ def printMicHeader(mic):
     print(mic.name+"(ISC="+str(round(mic.ics, 6))+", ESC="+str(round(mic.ecs, 6))+"): ",end="")
 
 clsController = Class("Controller")
-clsStorageType = Class("StorageType")
-clsDbStorage = Class("DbStorage")
-clsFileStorage = Class("FileStorage")
-clsDataParser = Class("DataParser")
+clsRole = Class("Role")
+clsStudents = Class("Students")
 clsStudent = Class("Student")
+clsAcademicStaffMembers = Class("AcademicStaffMembers")
+clsAcademicStaffMember = Class("AcademicStaffMember")
+clsModule = Class("Module")
+clsModuleCode = Class("ModuleCode")
 
-clsController.addRelationship((clsStorageType, RelationshipType.ASSOCIATION))
-clsController.addRelationship((clsDbStorage, RelationshipType.DEPENDENCY))
-clsController.addRelationship((clsFileStorage, RelationshipType.DEPENDENCY))
-clsDataParser.addRelationship((clsDbStorage, RelationshipType.COMPOSITION))
-clsDataParser.addRelationship((clsFileStorage, RelationshipType.COMPOSITION))
-clsStudent.addRelationship((clsDbStorage, RelationshipType.COMPOSITION))
-clsStudent.addRelationship((clsFileStorage, RelationshipType.COMPOSITION))
+clsController.addRelationship((clsRole, RelationshipType.ASSOCIATION))
+clsController.addRelationship((clsStudents, RelationshipType.DEPENDENCY))
+clsController.addRelationship((clsAcademicStaffMembers, RelationshipType.DEPENDENCY))
+clsStudent.addRelationship((clsStudents, RelationshipType.COMPOSITION))
+clsAcademicStaffMember.addRelationship((clsAcademicStaffMembers, RelationshipType.COMPOSITION))
+clsModule.addRelationship((clsStudent, RelationshipType.COMPOSITION))
+clsModule.addRelationship((clsAcademicStaffMember, RelationshipType.COMPOSITION))
+clsModuleCode.addRelationship((clsStudent, RelationshipType.COMPOSITION))
+clsModuleCode.addRelationship((clsAcademicStaffMember, RelationshipType.COMPOSITION))
+clsModuleCode.addRelationship((clsModule, RelationshipType.COMPOSITION))
 
-classes = [clsStudent, clsDbStorage, clsFileStorage, clsDataParser, clsController, clsStorageType]
+classes = [clsController, clsRole, clsStudents, clsAcademicStaffMembers, clsAcademicStaffMember, clsStudent, clsModule, clsModuleCode]
 
 # Threshold constants
-ics_min = 0.29
-ecs_min = 0.2
+ics_min = 0.20
+ecs_min = 0.1
 
 # Initialization
 l = []
