@@ -1,4 +1,5 @@
 from enum import Enum
+import math
 
 class RelationshipType(Enum):
     INHERITANCE = 1
@@ -88,23 +89,24 @@ class Class:
 class Microservice:
     _microservice_counter = 1
 
-    def __init__(self, classes):
+    def __init__(self, classes, parents):
         self.name = "microservice" + str(type(self)._microservice_counter)
         type(self)._microservice_counter += 1
         self.classes = classes
-        self.isc = 0
-        self.esc = 0
+        self.parents = parents
+        self.ics = 0
+        self.ecs = 0
     
     def updateInternalCohesion(self):
         if (len(self.classes) == 1):
-            self.isc = 0
+            self.ics = 0
         else:
             internal_cohesion = 0
             for i in range(len(self.classes)-1):
                 for j in range(i+1, len(self.classes)):
                     internal_cohesion += self.classes[i].intraSimilarity(self.classes[j], pr)
                     internal_cohesion += self.classes[j].intraSimilarity(self.classes[i], pr)
-            self.isc = internal_cohesion / (len(self.classes) * (len(self.classes) - 1))
+            self.ics = internal_cohesion / (len(self.classes) * (len(self.classes) - 1))
     
     def updateExternalCohesion(self, other_mics):
         children = []
@@ -129,9 +131,36 @@ class Microservice:
                     for cj in self.classes:
                         x += ci.interSimilarity(cj, pr)
                 external_cohesion += x / len(self.classes)
-            self.esc = external_cohesion / len(clients)
+            self.ecs = external_cohesion / len(clients)
         else:
-            self.esc = 0
+            self.ecs = 0
+
+def getSubObptimal(mic_list):
+    globalCounter = -1
+    globalMax = -1
+    globalMin = math.inf
+    for i in range(len(mic_list)):
+        localMax = mic_list[i].ics
+        localMin = mic_list[i].ecs
+        mic = mic_list[i]
+        for j in range(len(mic_list)):
+            if (i != j):
+                localMax = max(localMax, mic_list[j].ics)
+                localMin = min(localMin, mic_list[j].ecs)
+
+        localCounter = 0
+        for j in range(1, len(mic_list)):
+            if (mic_list[j].ics <= localMax and mic_list[j].ecs >= localMin and mic_list[j] != mic):
+                localCounter += 1
+        if localCounter > globalCounter:
+            globalCounter = localCounter
+            globalMax = localMax
+            globalMin = localMin
+            globalMic = mic
+    return globalMic
+
+def printMicHeader(mic):
+    print(mic.name+"(ISC="+str(round(mic.ics, 2))+", ESC="+str(round(mic.ecs, 2))+"): ",end="")
 
 clsController = Class("Controller")
 clsStorageType = Class("StorageType")
@@ -150,39 +179,63 @@ clsStudent.addRelationship((clsFileStorage, RelationshipType.COMPOSITION))
 
 classes = [clsStudent, clsDbStorage, clsFileStorage, clsDataParser, clsController, clsStorageType]
 
+# Threshold constants
+ics_min = 0.29
+ecs_min = 0.2
 
-"""
-
-for i in range(len(classes)-1):
-    for j in range(i+1, len(classes)):
-        intrasim = intraSimilarity(classes[i], classes[j], pr, lev_distances[(classes[i].name, classes[j].name)])
-        print("sim_intra("+classes[i].name+", "+classes[j].name+") = "+str(intrasim))
-        intrasim_swapped = intraSimilarity(classes[j], classes[i], pr, lev_distances[(classes[i].name, classes[j].name)]) #Lev-distance tuple-key isn't swapped because its order matters
-        print("sim_intra("+classes[j].name+", "+classes[i].name+") = "+str(intrasim_swapped))
- 
-print("\n\n")
-
-for i in range(len(classes)-1):
-    for j in range(i+1, len(classes)):
-        intersim = interSimilarity(classes[i], classes[j], pr, lev_distances[(classes[i].name, classes[j].name)])
-        print("sim_inter("+classes[i].name+", "+classes[j].name+") = "+str(intersim))
-        intersim_swapped = interSimilarity(classes[j], classes[i], pr, lev_distances[(classes[i].name, classes[j].name)])
-        print("sim_inter("+classes[j].name+", "+classes[i].name+") = "+str(intersim_swapped))
-"""
-
+# Initialization
 l = []
 for c in classes:
-    l.append(Microservice([c])) 
+    l.append(Microservice([c], None)) 
+l_tmp = [1] # Dummy value because we need the below to run once and Python lacks 'do-while'
+iter_count = 0
 
-l_tmp = []
-for i in range(len(l)-1):
-    for j in range(i+1, len(l)):
-        l_tmp.append(Microservice(l[i].classes + l[j].classes))
+while (len(l_tmp) != 0):
+    print("\n==========================")
+    print("ITERATION " + str(iter_count+1))
+    print("==========================\n")
 
-for mic in l_tmp:
-    mic.updateInternalCohesion()
-    mic.updateExternalCohesion(l)
-    print(mic.name, end="")
-    print(" (ISC=" + str(round(mic.isc, 2)) + ", ESC=" + str(round(mic.esc, 2)) + "):")
-    for c in mic.classes:
-        print("\t"+c.name)
+    l_tmp = []
+    for i in range(len(l)-1):
+        for j in range(i+1, len(l)):
+            new_mic = Microservice(l[i].classes + l[j].classes, [l[i], l[j]])
+            new_mic.updateInternalCohesion()
+            new_mic.updateExternalCohesion(l)
+            print(l[i].name + " + " + l[j].name + " -> ",end="")
+            printMicHeader(new_mic)
+            if (new_mic.ics >= ics_min and new_mic.ecs >= ecs_min):
+                l_tmp.append(new_mic)
+                print("PASS")
+            else:
+                del new_mic
+                print("FAIL")
+
+    print("\n\n-------------------")
+    print("Microservices in l_tmp: ")
+    for mic in l_tmp:
+        print("\t",end="")
+        printMicHeader(mic)
+        print()
+        for c in mic.classes:
+            print("\t\t"+c.name)
+
+    print("-----------------")
+
+    if (len(l_tmp) != 0):
+        subOptimalMic = getSubObptimal(l_tmp)
+        l.append(subOptimalMic)
+        l.remove(subOptimalMic.parents[0])
+        l.remove(subOptimalMic.parents[1])
+
+        print("\nSelected microservice: " + subOptimalMic.name)
+        print("\nNew list of L:")
+        for mic in l:
+            printMicHeader(mic)
+            print()
+            for c in mic.classes:
+                print("\t"+c.name)
+        
+        input("\nPress [RETURN] to continue to the next iteration.")
+        iter_count += 1
+    else:
+        input("Iterations COMPLETE!")
