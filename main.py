@@ -150,6 +150,7 @@ class Microservice:
                     for r in c.outgoing_relationships:
                         if (r[0] in self.classes):
                             clients.append(mic)
+                            break
         
         if (clients):
             external_cohesion = 0
