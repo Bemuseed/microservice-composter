@@ -28,13 +28,18 @@ external_weightings = {
 }
 
 def levSimilarity(class_a, class_b):
+    print("lev_sim("+class_a.name+", "+class_b.name+")=",end="")
     lev_dist = getLevDistance(class_a, class_b)
     len_a = len(class_a.name)
     len_b = len(class_b.name)
     if (len_a == len_b):
-        return 1 - (lev_dist / len_a)
+        ans =  1 - (lev_dist / len_a)
+        print(ans)
+        return ans
     else:
-        return 1 - (lev_dist / (len_a + len_b))
+        ans = 1 - (lev_dist / (len_a + len_b))
+        print(ans)
+        return ans
 
 def pr(list):
     product = list[0]
@@ -102,7 +107,9 @@ class Class:
         else:
             max_relationship = max(map(internal_weightings.get, relationships))
         
-        return fsim([max_relationship, levSimilarity(self, other_class)])
+        ans = fsim([max_relationship, levSimilarity(self, other_class)])
+        print("sim_intra("+self.name+", "+other_class.name+") = "+str(ans))
+        return ans
 
     def interSimilarity(self, other_class, fsim):
         relationships = self.getRelationshipsTo(other_class)
@@ -111,7 +118,9 @@ class Class:
         else:
             max_relationship = min(map(external_weightings.get, relationships))
         
-        return fsim([max_relationship, 1 - levSimilarity(self, other_class)])
+        ans = fsim([max_relationship, 1 - levSimilarity(self, other_class)])
+        print("sim_inter("+self.name+", "+other_class.name+") = "+str(ans))
+        return ans
 
 
 class Microservice:
@@ -135,6 +144,7 @@ class Microservice:
                     internal_cohesion += self.classes[i].intraSimilarity(self.classes[j], pr)
                     internal_cohesion += self.classes[j].intraSimilarity(self.classes[i], pr)
             self.ics = internal_cohesion / (len(self.classes) * (len(self.classes) - 1))
+        print("ics of "+self.name+" = "+str(self.ics))
     
     def updateExternalCohesion(self, other_mics):
         children = []
@@ -162,6 +172,7 @@ class Microservice:
             self.ecs = external_cohesion / len(clients)
         else:
             self.ecs = 0
+        print("ecs of "+self.name+" = "+str(self.ecs))
 
 """
 def getSubOptimal(mic_list: list):
@@ -255,51 +266,13 @@ l_tmp = [1] # Dummy value because we need the below to run once and Python lacks
 iter_count = 0
 
 while (len(l_tmp) != 0):
-    print("\n==========================")
-    print("ITERATION " + str(iter_count+1))
-    print("==========================\n")
-
     l_tmp = []
     for i in range(len(l)-1):
         for j in range(i+1, len(l)):
             new_mic = Microservice(l[i].classes + l[j].classes, [l[i], l[j]])
+            print(l[i].name + " + " + l[j].name + " -> "+new_mic.name)
+            for c in new_mic.classes:
+                print("  "+c.name)
             new_mic.updateInternalCohesion()
             new_mic.updateExternalCohesion(l)
-            print(l[i].name + " + " + l[j].name + " -> ",end="")
-            printMicHeader(new_mic)
-            if (new_mic.ics >= ics_min and new_mic.ecs >= ecs_min):
-                l_tmp.append(new_mic)
-                print("PASS")
-            else:
-                del new_mic
-                print("FAIL")
-
-    print("\n\n-------------------")
-    print("Microservices in l_tmp: ")
-    for mic in l_tmp:
-        print("\t",end="")
-        printMicHeader(mic)
-        print()
-        for c in mic.classes:
-            print("\t\t"+c.name)
-
-    print("-----------------")
-
-    if (len(l_tmp) != 0):
-        subOptimalMic = getSubOptimal(l_tmp)
-        l.append(subOptimalMic)
-        l.remove(subOptimalMic.parents[0])
-        l.remove(subOptimalMic.parents[1])
-
-        print("\nSelected microservice: " + subOptimalMic.name)
-        print("\nNew list of L:")
-        for mic in l:
-            printMicHeader(mic)
-            print()
-            for c in mic.classes:
-                print("\t"+c.name)
-        
-        input("\nPress [RETURN] to continue to the next iteration.")
-        iter_count += 1
-    else:
-        input("Iterations COMPLETE!")
+            print("\n\n")
