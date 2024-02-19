@@ -160,6 +160,10 @@ class Microservice:
                     for r in c.outgoing_relationships:
                         if (r[0] in self.classes):
                             clients.append(mic)
+                            break
+        print("Clients of "+self.name+": ")
+        for c in clients:
+            print("\t"+c.name)
         
         if (clients):
             external_cohesion = 0
@@ -260,10 +264,15 @@ ecs_min = 0.1
 
 # Initialization
 l = []
+print("L:")          
 for c in classes:
     l.append(Microservice([c], None)) 
+    print("\t"+l[-1].name)
 l_tmp = [1] # Dummy value because we need the below to run once and Python lacks 'do-while'
 iter_count = 0
+
+print()
+print()
 
 while (len(l_tmp) != 0):
     l_tmp = []
