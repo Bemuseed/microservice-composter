@@ -1,5 +1,5 @@
 from enum import Enum
-import random
+import copy
 
 class RelationshipType(Enum):
     INHERITANCE = 1
@@ -222,6 +222,15 @@ def getSubOptimal(mic_list: list):
 def printMicHeader(mic):
     print(mic.name+"(ISC="+str(round(mic.ics, 6))+", ESC="+str(round(mic.ecs, 6))+"): ",end="")
 
+def printSystem(sys):
+    for mic in sys:
+        print(mic.name+":")
+        for c in mic.classes:
+            print("  "+c.name)
+            for rel in c.outgoing_relationships:
+                print("    -> "+getMicForClass(rel[0], sys).name+"."+rel[0].name+" ["+rel[1].name+"]")
+
+
 clsController = Class("Controller")
 clsRole = Class("Role")
 clsStudents = Class("Students")
@@ -304,3 +313,150 @@ while (len(l_tmp) != 0):
         iter_count += 1
     else:
         input("Iterations COMPLETE!")
+"""
+
+clsCalendar = Class("Calendar")
+clsAgent = Class("Agent")
+clsWriter = Class("Writer")
+clsReader = Class("Reader")
+clsBook = Class("Book")
+
+clsAgent.addRelationship((clsCalendar, RelationshipType.ASSOCIATION))
+clsAgent.addRelationship((clsWriter, RelationshipType.ASSOCIATION))
+clsBook.addRelationship((clsWriter, RelationshipType.AGGREGATION))
+clsBook.addRelationship((clsReader, RelationshipType.AGGREGATION))
+
+l = [
+    Microservice([clsCalendar], None),
+    Microservice([clsReader], None),
+    Microservice([clsAgent], None),
+    Microservice([clsWriter, clsBook], None)
+]
+
+l[0].name = "microservice1"
+l[1].name = "microservice3"
+l[2].name = "microservice4"
+l[3].name = "microservice13"
+"""
+# UML Validation
+
+strong_relationships = [RelationshipType.REALIZATION,
+                        RelationshipType.INHERITANCE,
+                        RelationshipType.AGGREGATION,
+                        RelationshipType.COMPOSITION]
+weak_relationships = [RelationshipType.ASSOCIATION,
+                      RelationshipType.DEPENDENCY]
+
+def getMicForClass(c, mics):
+    for mic in mics:
+        if (c in mic.classes):
+            return mic
+    return None
+
+def strongValidation(c1, mics):
+    mic1 = getMicForClass(c1, mics)
+    other_mics = [m for m in mics if m != mic1]
+    for mic in other_mics:
+        for c2 in mic.classes:
+            for rel in c2.outgoing_relationships:
+                if (rel[0] == c1 and (rel[1] in strong_relationships)):
+                    return c2
+    return None
+
+# Filtering included here, rather than in its own function
+def weakValidation(c2, mics):
+    failing_class = None
+    mic1 = getMicForClass(c2, mics)
+    other_mics = [m for m in mics if m.name != mic1.name]
+    for mic in other_mics:
+        for c1 in mic.classes:
+            for rel in c1.outgoing_relationships:
+                if (rel[0] == c2 and (rel[1] in weak_relationships)):
+                    if failing_class:
+                        return None
+                    else:
+                        failing_class = c1
+    return failing_class
+
+
+# Initialization
+print("\n\nUML Validation\n")
+printSystem(l)
+
+st = dict()
+not_st = dict()
+
+for mic in l:
+    st[mic] = []
+    not_st[mic] = []
+
+for mic in l:
+    for c in mic.classes:
+        failing_class = strongValidation(c, l)
+        if (failing_class):
+            st[mic].append(failing_class)
+        elif (len(mic.classes) == 1):
+            failing_class = weakValidation(c, l)
+            if (failing_class):
+                not_st[getMicForClass(failing_class, l)].append(c)
+
+print("\n\n----------")
+print("To copy:")
+for k, v in st.items():
+    if (v != []):
+        for c in v:
+            print("  "+getMicForClass(c,l).name+"."+c.name+" -> "+k.name)
+
+print("\nTo move:")
+for k, v in not_st.items():
+    if (v != []):
+        for c in v:
+            print("  "+getMicForClass(c,l).name+"."+c.name+" -> "+k.name)
+
+print("----------\n")
+
+# Filtering is included already
+"""
+# Copying
+for k, v in st.items():
+    target_mic = k
+    for c in v:
+        if (c != []):
+            copy_c = copy.copy(c)
+            new_rels = []
+            for rel in copy_c.outgoing_relationships:
+                if (getMicForClass(rel[0], l) == target_mic):
+                    new_rels.append(rel)
+            copy_c.outgoing_relationships = new_rels
+
+            for cx in target_mic.classes:
+                for rel in cx.outgoing_relationships:
+                    if (rel[0] == c):
+                        rel[0] = copy_c
+            
+            new_rels = []
+            for rel in c.outgoing_relationships:
+                if (getMicForClass(rel[0], l) != target_mic):
+                    new_rels.append(rel)
+            c.outgoing_relationships = new_rels
+
+            target_mic.classes.append(copy_c)
+            
+printSystem(l)
+
+# Copying - deletion
+
+to_delete = []
+for mic in l:
+    externally_connected = False
+    for c in mic.classes:
+        for rel in c.outgoing_relationships:
+            if (getMicForClass(rel[0], l) != mic):
+                externally_connected = True
+    if (not externally_connected):
+        to_delete.append(mic)
+
+# Moving
+
+
+"""
